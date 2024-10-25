@@ -20,6 +20,16 @@ type testActor struct {
 
 func (t testActor) Init(ctx actor.IContext, params ...interface{}) {
 	fmt.Printf("Init\n")
+	ctx.TimerHub().AddTimer(time.Second*2, func() {
+		t.OnTimer(ctx)
+	})
+}
+
+func (t testActor) OnTimer(ctx actor.IContext) {
+	fmt.Printf("OnTimer %d\n", time.Now().Unix())
+	ctx.TimerHub().AddTimer(time.Second*2, func() {
+		t.OnTimer(ctx)
+	})
 }
 
 func (t testActor) Receive(context actor.IContext) error {
@@ -64,6 +74,5 @@ func TestActorFuture(t *testing.T) {
 	fmt.Printf("fut:%v %v\n", result, isTimeout)
 	pid.Send("2")
 	pid.Send("3")
-	pid.Stop()
 	time.Sleep(time.Second * 10)
 }

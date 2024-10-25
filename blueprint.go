@@ -66,7 +66,8 @@ func (b *blueprint) getMailBox() IMailbox {
 func (b *blueprint) Spawn(system ISystem, params ...interface{}) (IProcess, error) {
 	mb := b.getMailBox()
 	process := NewBaseProcess(mb)
-	context := NewBaseActorContext(b.getReceiver(), system, process)
+	th := newTimerHub(process)
+	context := NewBaseActorContext(b.getReceiver(), system, process, th)
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
 	if err := process.Send(&StartedMessage{Params: params}); err != nil {

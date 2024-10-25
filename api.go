@@ -8,7 +8,9 @@
 
 package actor
 
-import "time"
+import (
+	"time"
+)
 
 type IMessageInvoker interface {
 	InvokerMessage(message interface{}) error
@@ -56,6 +58,7 @@ type IContext interface {
 	Message() interface{}
 	Process() IProcess
 	System() ISystem
+	TimerHub() ITimerHub
 }
 
 type IProcess interface {
@@ -98,4 +101,16 @@ type IFuture interface {
 type IEnvelope interface {
 	Message() interface{}
 	Sender() IProcess
+}
+
+type ITimer interface {
+	Id() int32
+	Trigger()
+	Stop()
+}
+
+type ITimerHub interface {
+	AddTimer(d time.Duration, fn func()) ITimer
+	Get(id int32) ITimer
+	Remove(id int32)
 }

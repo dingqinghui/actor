@@ -17,6 +17,10 @@ type PanicMessage struct {
 	err error
 }
 
+type TimerMessage struct {
+	id int32
+}
+
 var _ IEnvelope = (*Envelope)(nil)
 
 type Envelope struct {

@@ -12,17 +12,19 @@ type baseActorContext struct {
 	receiver IReceiver
 	process  IProcess
 	system   ISystem
+	th       ITimerHub
 	message  interface{}
 }
 
 var _ IContext = &baseActorContext{}
 var _ IMessageInvoker = &baseActorContext{}
 
-func NewBaseActorContext(receiver IReceiver, system ISystem, process IProcess) *baseActorContext {
+func NewBaseActorContext(receiver IReceiver, system ISystem, process IProcess, th ITimerHub) *baseActorContext {
 	a := &baseActorContext{
 		receiver: receiver,
 		system:   system,
 		process:  process,
+		th:       th,
 	}
 	return a
 }
@@ -39,6 +41,15 @@ func (a *baseActorContext) InvokerMessage(message interface{}) error {
 		return nil
 	case *PanicMessage:
 		a.receiver.Panic(a)
+		return nil
+	case *TimerMessage:
+		msg := message.(*TimerMessage)
+		timer := a.TimerHub().Get(msg.id)
+		if timer == nil {
+			return nil
+		}
+		timer.Trigger()
+		a.TimerHub().Remove(msg.id)
 		return nil
 	}
 	return a.Receive()
@@ -61,4 +72,8 @@ func (a *baseActorContext) Process() IProcess {
 
 func (a *baseActorContext) System() ISystem {
 	return a.system
+}
+
+func (a *baseActorContext) TimerHub() ITimerHub {
+	return a.th
 }
