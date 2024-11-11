@@ -12,11 +12,10 @@ import (
 	"time"
 )
 
-type MessageHandler func(ctx IContext, message IEnvelope)
 type Producer func() IActor
 
 type IMessageInvoker interface {
-	InvokerMessage(message IEnvelope) error
+	InvokerMessage(message IEnvelopeMessage) error
 }
 
 type IMailbox interface {
@@ -25,7 +24,7 @@ type IMailbox interface {
 	// @Description: 向邮箱投递消息(写入)
 	// @param msg
 	//
-	PostMessage(msg IEnvelope) error
+	PostMessage(msg IEnvelopeMessage) error
 	//
 	// RegisterHandlers
 	// @Description: 注册消息处理函数(取出并处理)
@@ -50,16 +49,12 @@ type IDispatcher interface {
 	Throughput() int
 }
 
-type IReceiver interface {
-}
-
 type IContext interface {
-	Message() IEnvelope
+	EnvMessage() IEnvelopeMessage
 	Process() IProcess
 	System() ISystem
-	Routes() IRoutes
 	Actor() IActor
-	AddTimer(d time.Duration, handler MessageHandler)
+	AddTimer(d time.Duration, funcName string)
 }
 
 type IProcess interface {
@@ -69,7 +64,7 @@ type IProcess interface {
 	// @param message
 	// @return error
 	//
-	Send(message IMessage) error
+	Send(funcName string, message interface{}) error
 	//
 	// Call
 	// @Description:发送同步消息
@@ -78,7 +73,7 @@ type IProcess interface {
 	// @return IFuture
 	// @return error
 	//
-	Call(message IMessage, timeout time.Duration) (IFuture, error)
+	Call(funcName string, message interface{}, timeout time.Duration) (IFuture, error)
 	//
 	// Stop
 	// @Description: 停止Actor
@@ -106,21 +101,8 @@ type IFuture interface {
 	Wait() (result interface{}, isTimeout bool)
 }
 
-type IRoutes interface {
-	Add(msgId int32, fn MessageHandler) error
-	Get(msgId int32) MessageHandler
-}
-
-// IMessage
-// @Description: 异步消息
-type IMessage interface {
-	ID() int32
-	Body() interface{}
-}
-type IEnvelope interface {
-	IMessage
+type IEnvelopeMessage interface {
+	FuncName() string
+	Msg() interface{}
 	Sender() IProcess
-}
-
-type IActor interface {
 }

@@ -8,13 +8,9 @@
 
 package actor
 
-type BlueprintOptionsFunc func(b *blueprint)
+import "sync"
 
-func WithReceiver(receiver IReceiver) BlueprintOptionsFunc {
-	return func(b *blueprint) {
-		b.receiver = receiver
-	}
-}
+type BlueprintOptionsFunc func(b *blueprint)
 
 func WithDispatcher(dispatcher IDispatcher) BlueprintOptionsFunc {
 	return func(b *blueprint) {
@@ -28,12 +24,6 @@ func WithMailBox(mailbox IMailbox) BlueprintOptionsFunc {
 	}
 }
 
-func WithRouter(routers IRoutes) BlueprintOptionsFunc {
-	return func(b *blueprint) {
-		b.routers = routers
-	}
-}
-
 func NewBlueprint(opts ...BlueprintOptionsFunc) IBlueprint {
 	b := new(blueprint)
 	for _, opt := range opts {
@@ -43,10 +33,10 @@ func NewBlueprint(opts ...BlueprintOptionsFunc) IBlueprint {
 }
 
 type blueprint struct {
-	receiver   IReceiver
-	dispatcher IDispatcher
-	mailbox    IMailbox
-	routers    IRoutes
+	dispatcher  IDispatcher
+	mailbox     IMailbox
+	onceHandler sync.Once
+	handlerDict map[string]*handler
 }
 
 func (b *blueprint) getDispatcher() IDispatcher {
@@ -56,13 +46,6 @@ func (b *blueprint) getDispatcher() IDispatcher {
 	return b.dispatcher
 }
 
-func (b *blueprint) getReceiver() IReceiver {
-	if b.receiver == nil {
-		b.receiver = NewDefaultReceiver()
-	}
-	return b.receiver
-}
-
 func (b *blueprint) getMailBox() IMailbox {
 	if b.mailbox == nil {
 		b.mailbox = NewMailbox()
@@ -70,27 +53,27 @@ func (b *blueprint) getMailBox() IMailbox {
 	return b.mailbox
 }
 
-func (b *blueprint) getRouter() IRoutes {
-	if b.routers == nil {
-		b.routers = NewBuiltinRoutes()
-	}
-	return b.routers
+func (b *blueprint) getHandlerContainer(actor IActor) *handlerContainer {
+	b.onceHandler.Do(func() {
+		b.handlerDict = getActorHandler(actor)
+	})
+	return newHandlerContainer(actor, b.handlerDict)
 }
 
 func (b *blueprint) Spawn(system ISystem, producer Producer, initParams ...interface{}) (IProcess, error) {
 	mb := b.getMailBox()
 	process := NewBaseProcess(mb)
+	actor := producer()
+	h := b.getHandlerContainer(actor)
 
 	context := NewBaseActorContext()
-	context.routers = b.getRouter()
-	context.actor = producer()
+	context.actor = actor
 	context.system = system
 	context.process = process
-	context.initParams = initParams
-	context.initialize()
+	context.handler = h
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
-	if err := process.Send(startMessage); err != nil {
+	if err := process.Send(InitFuncName, initParams); err != nil {
 		return nil, err
 	}
 	return process, nil

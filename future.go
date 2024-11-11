@@ -13,13 +13,13 @@ import "time"
 func newFuture(timeout time.Duration) *future {
 	f := new(future)
 	f.timeout = timeout
-	f.ch = make(chan IEnvelope, 1)
+	f.ch = make(chan IEnvelopeMessage, 1)
 	f.after = time.After(f.timeout)
 	return f
 }
 
 type future struct {
-	ch      chan IEnvelope
+	ch      chan IEnvelopeMessage
 	timeout time.Duration
 	after   <-chan time.Time
 }
@@ -27,7 +27,7 @@ type future struct {
 func (f *future) Wait() (result interface{}, isTimeout bool) {
 	select {
 	case env := <-f.ch:
-		result = env.Body()
+		result = env.Msg()
 	case <-f.after:
 		isTimeout = true
 	}
@@ -38,12 +38,12 @@ func (f *future) Process() IProcess {
 	return f
 }
 
-func (f *future) Call(message IMessage, timeout time.Duration) (IFuture, error) {
+func (f *future) Call(funcName string, message interface{}, timeout time.Duration) (IFuture, error) {
 	panic("future call not imp")
 }
 
-func (f *future) Send(message IMessage) error {
-	f.ch <- WrapMessage(nil, message)
+func (f *future) Send(funcName string, msg interface{}) error {
+	f.ch <- WrapEnvMessage(funcName, nil, msg)
 	return nil
 }
 

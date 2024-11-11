@@ -28,18 +28,18 @@ type ProcessActor struct {
 	mailBox IMailbox
 }
 
-func (p *ProcessActor) Send(message IMessage) error {
+func (p *ProcessActor) Send(funcName string, msg interface{}) error {
 	if p.mailBox == nil {
 		return ErrMailBoxNil
 	}
 	if p.isStop.CompareAndSwap(true, true) {
 		return ErrActorStopped
 	}
-	env := WrapMessage(nil, message)
+	env := WrapEnvMessage(funcName, nil, msg)
 	return p.mailBox.PostMessage(env)
 }
 
-func (p *ProcessActor) Call(message IMessage, timeout time.Duration) (IFuture, error) {
+func (p *ProcessActor) Call(funcName string, message interface{}, timeout time.Duration) (IFuture, error) {
 	if p.mailBox == nil {
 		return nil, ErrMailBoxNil
 	}
@@ -48,13 +48,14 @@ func (p *ProcessActor) Call(message IMessage, timeout time.Duration) (IFuture, e
 	}
 
 	fut := newFuture(timeout)
-	env := WrapMessage(fut.Process(), message)
+	env := WrapEnvMessage(funcName, fut.Process(), message)
 	return fut, p.mailBox.PostMessage(env)
 }
 
 func (p *ProcessActor) Stop() error {
 	if p.isStop.CompareAndSwap(false, true) {
-		return p.mailBox.PostMessage(stopMessage)
+		env := WrapEnvMessage(StopFuncName, nil, nil)
+		return p.mailBox.PostMessage(env)
 	}
 	return nil
 }

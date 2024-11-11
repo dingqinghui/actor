@@ -25,14 +25,14 @@ func (s *System) Spawn(b IBlueprint, producer Producer, params ...interface{}) (
 }
 
 func (s *System) Named(name string, p IProcess) error {
-	return s.nameHub.Send(NewMessage(namedMsgId, &namedBody{
+	return s.nameHub.Send("Named", &namedMsg{
 		name:    name,
 		process: p,
-	}))
+	})
 }
 
 func (s *System) GetProcessByName(name string) (IProcess, error) {
-	fut, err := s.nameHub.Call(NewMessage(getNameMsgId, name), time.Second*3)
+	fut, err := s.nameHub.Call("Get", name, time.Second*3)
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +41,9 @@ func (s *System) GetProcessByName(name string) (IProcess, error) {
 		return nil, nil
 	}
 	return res.(IProcess), nil
+
 }
 
 func (s *System) DelName(name string) error {
-	return s.nameHub.Send(NewMessage(delNameMsgId, name))
+	return s.nameHub.Send("Del", name)
 }

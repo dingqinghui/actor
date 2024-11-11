@@ -16,51 +16,33 @@ import (
 )
 
 type testActor struct {
+	actor.BuiltinActor
 }
 
-func (t testActor) initialize() {
-	println("================testActor Initialize=================")
+func (t *testActor) Init(ctx actor.IContext, msg interface{}) {
+	fmt.Printf("==================Init %v==================\n", msg)
+	ctx.AddTimer(time.Second*1, "OnTimer")
 }
 
-func initRoute() actor.IRoutes {
-	routers := actor.NewBuiltinRoutes()
-	routers.Add(actor.StartMessageId, func(ctx actor.IContext, env actor.IEnvelope) {
-		println("================actor start=================")
-		t := ctx.Actor().(*testActor)
-		t.initialize()
-	})
-	routers.Add(actor.StopMessageId, func(ctx actor.IContext, env actor.IEnvelope) {
-		println("================actor stop=================")
-	})
-
-	routers.Add(1, func(ctx actor.IContext, env actor.IEnvelope) {
-		fmt.Printf("================actor msg:%v=================\n", env.Body())
-	})
-
-	routers.Add(2, func(ctx actor.IContext, env actor.IEnvelope) {
-		fmt.Printf("================actor msg:%v=================\n", env.Body())
-		env.Sender().Send(actor.NewMessage(1, "1111"))
-	})
-	return routers
+func (t *testActor) TestHandler(ctx actor.IContext, msg interface{}) {
+	fmt.Printf("==================TestHandler %v==================\n", msg)
+}
+func (t *testActor) OnTimer(ctx actor.IContext, msg interface{}) {
+	fmt.Printf("==================OnTimer:%v==================\n", time.Now().Unix())
+	ctx.AddTimer(time.Second*1, "OnTimer")
 }
 
 func TestActor(t *testing.T) {
 	system := actor.NewSystem()
 
-	blueprint := actor.NewBlueprint(actor.WithReceiver(&testActor{}), actor.WithRouter(initRoute()))
-	pid, _ := system.Spawn(blueprint, func() actor.IActor { return &testActor{} })
-	pid.Send(actor.NewMessage(1, "1111"))
+	blueprint := actor.NewBlueprint()
+	pid, _ := system.Spawn(blueprint, func() actor.IActor { return &testActor{} }, "init params")
+	system.Named("1", pid)
+	_pid, _ := system.GetProcessByName("1")
+	_ = _pid
+	system.DelName("1")
 
-	fut, _ := pid.Call(actor.NewMessage(2, "1111"), time.Second)
-	result, isTimeout := fut.Wait()
-	fmt.Printf("fut:%v %v\n", result, isTimeout)
-
-	system.Named("testName", pid)
-	p, _ := system.GetProcessByName("testName")
-
-	system.DelName("testName")
-	p, _ = system.GetProcessByName("testName")
-	_ = p
-	pid.Stop()
+	pid.Send("TestHandler", "test msg")
 	time.Sleep(time.Second * 10)
+	pid.Stop()
 }

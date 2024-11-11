@@ -9,62 +9,43 @@
 package actor
 
 const (
-	SystemMessageMax = 0
-	StartMessageId   = -1
-	StopMessageId    = -2
-	PanicMessageId   = -3
-	timerMessageId   = -4
-	SystemMessageMin = -5
+	InitFuncName  = "Init"
+	StopFuncName  = "Stop"
+	PanicFuncName = "Panic"
 )
 
 var (
-	NilMessage   = new(BuiltinMessage)
-	startMessage = newSysMessage(StartMessageId)
-	stopMessage  = newSysMessage(StopMessageId)
-	panicMessage = newSysMessage(PanicMessageId)
+	NilMsg = struct{}{}
 )
 
-func newSysMessage(msgId int32) IEnvelope {
-	msg := &BuiltinMessage{
-		msgId: msgId,
-	}
-	return WrapMessage(nil, msg)
-}
-
-func WrapMessage(sender IProcess, message IMessage) IEnvelope {
-	return &EnvelopeMessage{
-		IMessage: message,
-		sender:   sender,
-	}
-}
-
-func NewMessage(msgId int32, body interface{}) IMessage {
-	return &BuiltinMessage{
-		msgId: msgId,
-		body:  body,
-	}
-}
-
-type BuiltinMessage struct {
-	msgId int32
-	body  interface{}
-}
-
-var _ IMessage = (*BuiltinMessage)(nil)
-
-func (b *BuiltinMessage) ID() int32 {
-	return b.msgId
-}
-
-func (b *BuiltinMessage) Body() interface{} {
-	return b.body
-}
-
 type EnvelopeMessage struct {
-	IMessage
-	sender IProcess
+	msg      interface{}
+	funcName string
+	sender   IProcess
 }
 
+func (e *EnvelopeMessage) FuncName() string {
+	return e.funcName
+}
+
+func (e *EnvelopeMessage) Msg() interface{} {
+	return e.msg
+}
 func (e *EnvelopeMessage) Sender() IProcess {
 	return e.sender
+}
+
+func WrapEnvMessage(funcName string, sender IProcess, msg interface{}) *EnvelopeMessage {
+	return &EnvelopeMessage{
+		msg:      msg,
+		sender:   sender,
+		funcName: funcName,
+	}
+}
+
+func UnwrapEnvMessage(env IEnvelopeMessage) (funcName string, sender IProcess, msg interface{}) {
+	if env == nil {
+		return
+	}
+	return env.FuncName(), env.Sender(), env.Msg()
 }
