@@ -8,61 +8,60 @@
 
 package actor
 
+import (
+	"sync"
+	"time"
+)
+
 type baseActorContext struct {
-	receiver IReceiver
-	process  IProcess
-	system   ISystem
-	th       ITimerHub
-	message  interface{}
+	actor      interface{}
+	process    IProcess
+	system     ISystem
+	routers    IRoutes
+	message    IEnvelope
+	initParams []interface{}
+	initOnce   sync.Once
 }
 
 var _ IContext = &baseActorContext{}
 var _ IMessageInvoker = &baseActorContext{}
 
-func NewBaseActorContext(receiver IReceiver, system ISystem, process IProcess, th ITimerHub) *baseActorContext {
-	a := &baseActorContext{
-		receiver: receiver,
-		system:   system,
-		process:  process,
-		th:       th,
-	}
-	return a
+func NewBaseActorContext() *baseActorContext {
+	return new(baseActorContext)
 }
-
-func (a *baseActorContext) InvokerMessage(message interface{}) error {
-	a.message = message
-	switch message.(type) {
-	case *StartedMessage:
-		msg := message.(*StartedMessage)
-		a.receiver.Init(a, msg.Params...)
-		return nil
-	case *StopMessage:
-		a.receiver.Stop(a)
-		return nil
-	case *PanicMessage:
-		a.receiver.Panic(a)
-		return nil
-	case *TimerMessage:
-		msg := message.(*TimerMessage)
-		timer := a.TimerHub().Get(msg.id)
-		if timer == nil {
-			return nil
+func (a *baseActorContext) initialize() {
+	// 注册定时器回调
+	a.registerTimerHandler()
+}
+func (a *baseActorContext) registerTimerHandler() {
+	// 注册定时器处理函数
+	_ = a.Routes().Add(timerMessageId, func(ctx IContext, msg IEnvelope) {
+		handler := msg.Body().(MessageHandler)
+		if handler == nil {
+			return
 		}
-		timer.Trigger()
-		a.TimerHub().Remove(msg.id)
+		handler(ctx, msg)
+	})
+}
+
+func (a *baseActorContext) InvokerMessage(message IEnvelope) error {
+	// 执行消息回调
+	a.message = message
+	handler := a.Routes().Get(a.message.ID())
+	if handler == nil {
 		return nil
 	}
-	return a.Receive()
+	handler(a, message)
+	return nil
+}
+func (a *baseActorContext) AddTimer(d time.Duration, handler MessageHandler) {
+	tw.AfterFunc(d, func() {
+		msg := NewMessage(timerMessageId, handler)
+		_ = a.Process().Send(msg)
+	})
 }
 
-func (a *baseActorContext) Receive() error {
-	if a.receiver == nil {
-		return ErrActorReceiveIsNil
-	}
-	return a.receiver.Receive(a)
-}
-
-func (a *baseActorContext) Message() interface{} {
+func (a *baseActorContext) Message() IEnvelope {
 	return a.message
 }
 
@@ -74,6 +73,10 @@ func (a *baseActorContext) System() ISystem {
 	return a.system
 }
 
-func (a *baseActorContext) TimerHub() ITimerHub {
-	return a.th
+func (a *baseActorContext) Routes() IRoutes {
+	return a.routers
+}
+
+func (a *baseActorContext) Actor() IActor {
+	return a.actor
 }

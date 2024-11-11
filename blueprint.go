@@ -28,6 +28,12 @@ func WithMailBox(mailbox IMailbox) BlueprintOptionsFunc {
 	}
 }
 
+func WithRouter(routers IRoutes) BlueprintOptionsFunc {
+	return func(b *blueprint) {
+		b.routers = routers
+	}
+}
+
 func NewBlueprint(opts ...BlueprintOptionsFunc) IBlueprint {
 	b := new(blueprint)
 	for _, opt := range opts {
@@ -40,6 +46,7 @@ type blueprint struct {
 	receiver   IReceiver
 	dispatcher IDispatcher
 	mailbox    IMailbox
+	routers    IRoutes
 }
 
 func (b *blueprint) getDispatcher() IDispatcher {
@@ -63,14 +70,27 @@ func (b *blueprint) getMailBox() IMailbox {
 	return b.mailbox
 }
 
-func (b *blueprint) Spawn(system ISystem, params ...interface{}) (IProcess, error) {
+func (b *blueprint) getRouter() IRoutes {
+	if b.routers == nil {
+		b.routers = NewBuiltinRoutes()
+	}
+	return b.routers
+}
+
+func (b *blueprint) Spawn(system ISystem, producer Producer, initParams ...interface{}) (IProcess, error) {
 	mb := b.getMailBox()
 	process := NewBaseProcess(mb)
-	th := newTimerHub(process)
-	context := NewBaseActorContext(b.getReceiver(), system, process, th)
+
+	context := NewBaseActorContext()
+	context.routers = b.getRouter()
+	context.actor = producer()
+	context.system = system
+	context.process = process
+	context.initParams = initParams
+	context.initialize()
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
-	if err := process.Send(&StartedMessage{Params: params}); err != nil {
+	if err := process.Send(startMessage); err != nil {
 		return nil, err
 	}
 	return process, nil

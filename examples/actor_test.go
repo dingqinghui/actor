@@ -18,61 +18,49 @@ import (
 type testActor struct {
 }
 
-func (t testActor) Init(ctx actor.IContext, params ...interface{}) {
-	fmt.Printf("Init\n")
-	ctx.TimerHub().AddTimer(time.Second*2, func() {
-		t.OnTimer(ctx)
+func (t testActor) initialize() {
+	println("================testActor Initialize=================")
+}
+
+func initRoute() actor.IRoutes {
+	routers := actor.NewBuiltinRoutes()
+	routers.Add(actor.StartMessageId, func(ctx actor.IContext, env actor.IEnvelope) {
+		println("================actor start=================")
+		t := ctx.Actor().(*testActor)
+		t.initialize()
 	})
-}
-
-func (t testActor) OnTimer(ctx actor.IContext) {
-	fmt.Printf("OnTimer %d\n", time.Now().Unix())
-	ctx.TimerHub().AddTimer(time.Second*2, func() {
-		t.OnTimer(ctx)
+	routers.Add(actor.StopMessageId, func(ctx actor.IContext, env actor.IEnvelope) {
+		println("================actor stop=================")
 	})
+
+	routers.Add(1, func(ctx actor.IContext, env actor.IEnvelope) {
+		fmt.Printf("================actor msg:%v=================\n", env.Body())
+	})
+
+	routers.Add(2, func(ctx actor.IContext, env actor.IEnvelope) {
+		fmt.Printf("================actor msg:%v=================\n", env.Body())
+		env.Sender().Send(actor.NewMessage(1, "1111"))
+	})
+	return routers
 }
-
-func (t testActor) Receive(context actor.IContext) error {
-	fmt.Printf("Receive:%v\n", context.Message())
-
-	switch context.Message().(type) {
-	case actor.IEnvelope:
-		env := context.Message().(actor.IEnvelope)
-		env.Sender().Send("11111111111111111")
-	}
-
-	return nil
-}
-
-func (t testActor) Panic(context actor.IContext) {
-	fmt.Printf("Stop\n")
-}
-
-func (t testActor) Stop(context actor.IContext) {
-	fmt.Printf("Stop\n")
-}
-
-var _ actor.IReceiver = &testActor{}
 
 func TestActor(t *testing.T) {
 	system := actor.NewSystem()
-	blueprint := actor.NewBlueprint(actor.WithReceiver(&testActor{}))
-	pid, _ := system.Spawn(blueprint)
-	pid.Send("1")
-	pid.Send("2")
-	pid.Send("3")
-	pid.Stop()
-	time.Sleep(time.Second * 10)
-}
 
-func TestActorFuture(t *testing.T) {
-	system := actor.NewSystem()
-	blueprint := actor.NewBlueprint(actor.WithReceiver(&testActor{}))
-	pid, _ := system.Spawn(blueprint)
-	fut, _ := pid.Call("1", time.Second*10)
+	blueprint := actor.NewBlueprint(actor.WithReceiver(&testActor{}), actor.WithRouter(initRoute()))
+	pid, _ := system.Spawn(blueprint, func() actor.IActor { return &testActor{} })
+	pid.Send(actor.NewMessage(1, "1111"))
+
+	fut, _ := pid.Call(actor.NewMessage(2, "1111"), time.Second)
 	result, isTimeout := fut.Wait()
 	fmt.Printf("fut:%v %v\n", result, isTimeout)
-	pid.Send("2")
-	pid.Send("3")
+
+	system.Named("testName", pid)
+	p, _ := system.GetProcessByName("testName")
+
+	system.DelName("testName")
+	p, _ = system.GetProcessByName("testName")
+	_ = p
+	pid.Stop()
 	time.Sleep(time.Second * 10)
 }

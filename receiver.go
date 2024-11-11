@@ -17,12 +17,5 @@ type BuiltinReceiver struct {
 
 var _ IReceiver = &BuiltinReceiver{}
 
-func (r *BuiltinReceiver) Init(ctx IContext, params ...interface{}) {
-}
-func (r *BuiltinReceiver) Receive(ctx IContext) error {
-	return nil
-}
-func (r *BuiltinReceiver) Stop(IContext) {
-}
-func (r *BuiltinReceiver) Panic(IContext) {
+func (r *BuiltinReceiver) Initialize(ctx IContext, params ...interface{}) {
 }

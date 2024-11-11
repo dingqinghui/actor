@@ -12,8 +12,11 @@ import (
 	"time"
 )
 
+type MessageHandler func(ctx IContext, message IEnvelope)
+type Producer func() IActor
+
 type IMessageInvoker interface {
-	InvokerMessage(message interface{}) error
+	InvokerMessage(message IEnvelope) error
 }
 
 type IMailbox interface {
@@ -22,7 +25,7 @@ type IMailbox interface {
 	// @Description: 向邮箱投递消息(写入)
 	// @param msg
 	//
-	PostMessage(msg interface{}) error
+	PostMessage(msg IEnvelope) error
 	//
 	// RegisterHandlers
 	// @Description: 注册消息处理函数(取出并处理)
@@ -48,17 +51,15 @@ type IDispatcher interface {
 }
 
 type IReceiver interface {
-	Init(ctx IContext, params ...interface{})
-	Receive(IContext) error
-	Stop(IContext)
-	Panic(IContext)
 }
 
 type IContext interface {
-	Message() interface{}
+	Message() IEnvelope
 	Process() IProcess
 	System() ISystem
-	TimerHub() ITimerHub
+	Routes() IRoutes
+	Actor() IActor
+	AddTimer(d time.Duration, handler MessageHandler)
 }
 
 type IProcess interface {
@@ -68,7 +69,7 @@ type IProcess interface {
 	// @param message
 	// @return error
 	//
-	Send(message interface{}) error
+	Send(message IMessage) error
 	//
 	// Call
 	// @Description:发送同步消息
@@ -77,7 +78,7 @@ type IProcess interface {
 	// @return IFuture
 	// @return error
 	//
-	Call(message interface{}, timeout time.Duration) (IFuture, error)
+	Call(message IMessage, timeout time.Duration) (IFuture, error)
 	//
 	// Stop
 	// @Description: 停止Actor
@@ -87,30 +88,39 @@ type IProcess interface {
 }
 
 type IBlueprint interface {
-	Spawn(system ISystem, params ...interface{}) (IProcess, error)
+	Spawn(system ISystem, producer Producer, params ...interface{}) (IProcess, error)
+}
+
+type INamedHub interface {
+	Named(name string, p IProcess) error
+	GetProcessByName(name string) (IProcess, error)
+	DelName(name string) error
 }
 
 type ISystem interface {
-	Spawn(b IBlueprint, params ...interface{}) (IProcess, error)
+	INamedHub
+	Spawn(b IBlueprint, producer Producer, params ...interface{}) (IProcess, error)
 }
 
 type IFuture interface {
 	Wait() (result interface{}, isTimeout bool)
 }
 
+type IRoutes interface {
+	Add(msgId int32, fn MessageHandler) error
+	Get(msgId int32) MessageHandler
+}
+
+// IMessage
+// @Description: 异步消息
+type IMessage interface {
+	ID() int32
+	Body() interface{}
+}
 type IEnvelope interface {
-	Message() interface{}
+	IMessage
 	Sender() IProcess
 }
 
-type ITimer interface {
-	Id() int32
-	Trigger()
-	Stop()
-}
-
-type ITimerHub interface {
-	AddTimer(d time.Duration, fn func()) ITimer
-	Get(id int32) ITimer
-	Remove(id int32)
+type IActor interface {
 }

@@ -41,7 +41,7 @@ func (m *mailbox) RegisterHandlers(invoker IMessageInvoker, dispatcher IDispatch
 	m.dispatch = dispatcher
 }
 
-func (m *mailbox) PostMessage(msg interface{}) error {
+func (m *mailbox) PostMessage(msg IEnvelope) error {
 	m.queue.Push(msg)
 	return m.schedule()
 }
@@ -51,7 +51,7 @@ func (m *mailbox) schedule() error {
 		return nil
 	}
 	if err := m.dispatch.Schedule(m.process, func(err interface{}) {
-		_ = m.invoker.InvokerMessage(&PanicMessage{err: err.(error)})
+		_ = m.invoker.InvokerMessage(panicMessage)
 	}); err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (m *mailbox) run() {
 		i++
 		msg := m.queue.Pop()
 		if msg != nil {
-			_ = m.invokerMessage(msg)
+			_ = m.invokerMessage(msg.(IEnvelope))
 		} else {
 			return
 		}
@@ -87,7 +87,7 @@ func (m *mailbox) run() {
 // @Description: 从队列中读取消息，并调用invoker处理
 // @receiver m
 // @return error
-func (m *mailbox) invokerMessage(msg interface{}) error {
+func (m *mailbox) invokerMessage(msg IEnvelope) error {
 	if err := m.invoker.InvokerMessage(msg); err != nil {
 		return err
 	}
