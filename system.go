@@ -20,8 +20,8 @@ func NewSystem() ISystem {
 	return s
 }
 
-func (s *System) Spawn(b IBlueprint, producer Producer, params ...interface{}) (IProcess, error) {
-	return b.Spawn(s, producer, params...)
+func (s *System) Spawn(b IBlueprint, producer Producer, params interface{}) (IProcess, error) {
+	return b.Spawn(s, producer, params)
 }
 
 func (s *System) Named(name string, p IProcess) error {
@@ -32,13 +32,9 @@ func (s *System) Named(name string, p IProcess) error {
 }
 
 func (s *System) GetProcessByName(name string) (IProcess, error) {
-	fut, err := s.nameHub.Call("Get", name, time.Second*3)
+	res, _, err := s.nameHub.Call("Get", name, time.Second*3)
 	if err != nil {
 		return nil, err
-	}
-	res, _ := fut.Wait()
-	if res == nil {
-		return nil, nil
 	}
 	return res.(IProcess), nil
 

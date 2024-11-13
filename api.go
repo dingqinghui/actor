@@ -94,7 +94,7 @@ type INamedHub interface {
 
 type ISystem interface {
 	INamedHub
-	Spawn(b IBlueprint, producer Producer, params ...interface{}) (IProcess, error)
+	Spawn(b IBlueprint, producer Producer, params interface{}) (IProcess, error)
 }
 
 type IFuture interface {
