@@ -73,7 +73,7 @@ type IProcess interface {
 	// @return IFuture
 	// @return error
 	//
-	Call(funcName string, message interface{}, timeout time.Duration) (IFuture, error)
+	Call(funcName string, message interface{}, timeout time.Duration) (interface{}, bool, error)
 	//
 	// Stop
 	// @Description: 停止Actor
