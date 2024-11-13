@@ -83,7 +83,7 @@ type IProcess interface {
 }
 
 type IBlueprint interface {
-	Spawn(system ISystem, producer Producer, params ...interface{}) (IProcess, error)
+	Spawn(system ISystem, producer Producer, params interface{}) (IProcess, error)
 }
 
 type INamedHub interface {

@@ -60,7 +60,7 @@ func (b *blueprint) getHandlerContainer(actor IActor) *handlerContainer {
 	return newHandlerContainer(actor, b.handlerDict)
 }
 
-func (b *blueprint) Spawn(system ISystem, producer Producer, initParams ...interface{}) (IProcess, error) {
+func (b *blueprint) Spawn(system ISystem, producer Producer, params interface{}) (IProcess, error) {
 	mb := b.getMailBox()
 	process := NewBaseProcess(mb)
 	actor := producer()
@@ -73,7 +73,7 @@ func (b *blueprint) Spawn(system ISystem, producer Producer, initParams ...inter
 	context.handler = h
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
-	if err := process.Send(InitFuncName, initParams); err != nil {
+	if err := process.Send(InitFuncName, params); err != nil {
 		return nil, err
 	}
 	return process, nil
