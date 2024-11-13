@@ -15,7 +15,7 @@ type namedMsg struct {
 
 func newNameHubActor(system ISystem) IProcess {
 	blueprint := NewBlueprint()
-	pid, _ := system.Spawn(blueprint, func() IActor { return &nameHub{} })
+	pid, _ := system.Spawn(blueprint, func() IActor { return &nameHub{} }, nil)
 	return pid
 }
 
