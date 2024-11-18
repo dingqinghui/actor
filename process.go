@@ -9,6 +9,7 @@
 package actor
 
 import (
+	"errors"
 	"sync/atomic"
 	"time"
 )
@@ -56,9 +57,14 @@ func (p *ProcessActor) Call(funcName string, message interface{}, timeout time.D
 }
 
 func (p *ProcessActor) Stop() error {
-	if p.isStop.CompareAndSwap(false, true) {
-		_, _, err := p.Call(StopFuncName, nil, time.Millisecond*10)
+	if !p.isStop.CompareAndSwap(false, true) {
+		return errors.New("actor stopped")
+	}
+	fut := newFuture(time.Millisecond * 10)
+	env := WrapEnvMessage(StopFuncName, fut.Process(), nil)
+	if err := p.mailBox.PostMessage(env); err != nil {
 		return err
 	}
+	fut.Wait()
 	return nil
 }

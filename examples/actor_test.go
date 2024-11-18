@@ -32,6 +32,11 @@ func (t *testActor) OnTimer(ctx actor.IContext, msg interface{}) {
 	ctx.AddTimer(time.Second*1, "OnTimer")
 }
 
+func (t *testActor) Stop(ctx actor.IContext, msg interface{}) {
+	fmt.Printf("==================Stop:%v==================\n", time.Now().Unix())
+	ctx.AddTimer(time.Second*1, "OnTimer")
+}
+
 func TestActor(t *testing.T) {
 	system := actor.NewSystem()
 
@@ -43,6 +48,8 @@ func TestActor(t *testing.T) {
 	system.DelName("1")
 
 	pid.Send("TestHandler", "test msg")
-	time.Sleep(time.Second * 10)
+	time.Sleep(time.Second * 2)
 	pid.Stop()
+
+	fmt.Printf("================================================================\n")
 }
