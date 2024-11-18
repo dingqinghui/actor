@@ -55,6 +55,7 @@ type IContext interface {
 	System() ISystem
 	Actor() IActor
 	AddTimer(d time.Duration, funcName string)
+	Respond(msg interface{}) error
 }
 
 type IProcess interface {
