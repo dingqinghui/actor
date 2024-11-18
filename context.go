@@ -34,6 +34,10 @@ func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) error {
 	// 执行消息回调
 	a.env = env
 	a.handler.Call(a, env)
+	// 同步stop
+	if env.FuncName() == StopFuncName {
+		return a.Respond(nil)
+	}
 	return nil
 }
 
