@@ -22,7 +22,6 @@ func (r *BuiltinActor) Init(ctx IContext, msg interface{}) {
 }
 
 func (r *BuiltinActor) Stop(ctx IContext, msg interface{}) {
-	_ = ctx.Respond(nil)
 }
 
 func (r *BuiltinActor) Panic(ctx IContext, msg interface{}) {
