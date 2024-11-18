@@ -57,8 +57,8 @@ func (p *ProcessActor) Call(funcName string, message interface{}, timeout time.D
 
 func (p *ProcessActor) Stop() error {
 	if p.isStop.CompareAndSwap(false, true) {
-		env := WrapEnvMessage(StopFuncName, nil, nil)
-		return p.mailBox.PostMessage(env)
+		_, _, err := p.Call(StopFuncName, nil, time.Millisecond*10)
+		return err
 	}
 	return nil
 }
