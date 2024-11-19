@@ -20,7 +20,7 @@ type baseActorContext struct {
 	env        IEnvelopeMessage
 	initParams []interface{}
 	initOnce   sync.Once
-	handler    *handlerContainer
+	handlers   *handlers
 }
 
 var _ IContext = &baseActorContext{}
@@ -33,7 +33,7 @@ func NewBaseActorContext() *baseActorContext {
 func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) error {
 	// 执行消息回调
 	a.env = env
-	a.handler.Call(a, env)
+	a.handlers.call(a, env)
 	// 同步stop
 	if env.FuncName() == StopFuncName {
 		return a.Respond(nil)

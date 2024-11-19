@@ -36,7 +36,7 @@ type blueprint struct {
 	dispatcher  IDispatcher
 	mailbox     IMailbox
 	onceHandler sync.Once
-	handlerDict map[string]*handler
+	h           *handlers
 }
 
 func (b *blueprint) getDispatcher() IDispatcher {
@@ -53,24 +53,24 @@ func (b *blueprint) getMailBox() IMailbox {
 	return b.mailbox
 }
 
-func (b *blueprint) getHandlerContainer(actor IActor) *handlerContainer {
+func (b *blueprint) getHandlers(actor IActor) *handlers {
 	b.onceHandler.Do(func() {
-		b.handlerDict = getActorHandler(actor)
+		b.h = newHandlers(actor)
 	})
-	return newHandlerContainer(actor, b.handlerDict)
+	return b.h
 }
 
 func (b *blueprint) Spawn(system ISystem, producer Producer, params interface{}) (IProcess, error) {
 	mb := b.getMailBox()
 	process := NewBaseProcess(mb)
 	actor := producer()
-	h := b.getHandlerContainer(actor)
+	h := b.getHandlers(actor)
 
 	context := NewBaseActorContext()
 	context.actor = actor
 	context.system = system
 	context.process = process
-	context.handler = h
+	context.handlers = h
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
 	if err := process.Send(InitFuncName, params); err != nil {

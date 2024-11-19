@@ -36,6 +36,9 @@ func (s *System) GetProcessByName(name string) (IProcess, error) {
 	if err != nil {
 		return nil, err
 	}
+	if res == nil {
+		return nil, nil
+	}
 	return res.(IProcess), nil
 
 }
