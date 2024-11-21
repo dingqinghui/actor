@@ -24,8 +24,8 @@ type testActor struct {
 	actor.BuiltinActor
 }
 
-func (t *testActor) TestHandler(ctx actor.IContext, msg *Message) {
-	fmt.Printf("==================TestHandler %v==================\n", msg)
+func (t *testActor) TestHandler(ctx actor.IContext, msg *Message, a int) {
+	fmt.Printf("==================TestHandler %v %v==================\n", msg, a)
 }
 
 func TestActor(t *testing.T) {
@@ -38,7 +38,7 @@ func TestActor(t *testing.T) {
 	blueprint := actor.NewBlueprint()
 	pid, _ := system.Spawn(blueprint, func() actor.IActor { return &testActor{} }, "init params")
 
-	pid.Send("TestHandler", &Message{A: 1})
+	pid.Send("TestHandler", &Message{A: 1}, 2)
 	time.Sleep(time.Second * 2)
 	pid.Stop()
 

@@ -24,10 +24,10 @@ type future struct {
 	after   <-chan time.Time
 }
 
-func (f *future) Wait() (result interface{}, isTimeout bool) {
+func (f *future) Wait() (result []interface{}, isTimeout bool) {
 	select {
 	case env := <-f.ch:
-		result = env.Msg()
+		result = env.Args()
 	case <-f.after:
 		isTimeout = true
 	}
@@ -38,12 +38,12 @@ func (f *future) Process() IProcess {
 	return f
 }
 
-func (f *future) Call(funcName string, message interface{}, timeout time.Duration) (interface{}, bool, error) {
+func (f *future) Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error) {
 	panic("future call not imp")
 }
 
-func (f *future) Send(funcName string, msg interface{}) error {
-	f.ch <- WrapEnvMessage(funcName, nil, msg)
+func (f *future) Send(funcName string, args ...interface{}) error {
+	f.ch <- WrapEnvMessage(funcName, nil, args...)
 	return nil
 }
 

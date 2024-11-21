@@ -9,37 +9,49 @@
 package actor
 
 import (
+	"github.com/dingqinghui/zlog"
+	"go.uber.org/zap"
 	"reflect"
+	"unicode"
+	"unicode/utf8"
 )
 
-func defaultHandlerFunc(actor IActor, ctx IContext, msg interface{}) {
+var (
+	typeOfContext = reflect.TypeOf((IContext)(nil))
+	typeOfActor   = reflect.TypeOf((IActor)(nil))
+)
 
-}
+func DefaultMethod(actor IActor, ctx IContext) {}
 
 type method struct {
-	fun     reflect.Value
-	typ     reflect.Type
-	inTypes []reflect.Type
-	inNum   int
+	name     string
+	fun      reflect.Value
+	typ      reflect.Type
+	argTypes []reflect.Type
+	argNum   int
 }
 
-func (m *method) call(ctx IContext, msg interface{}) {
-	args := make([]reflect.Value, 2, 2)
-	args[0] = reflect.ValueOf(ctx.Actor())
-	args[1] = reflect.ValueOf(ctx)
-	if m.inNum == 2 {
-		m.fun.Call(args)
+func (m *method) call(ctx IContext, args []interface{}) {
+	if len(args) != m.argNum {
+		zlog.Error("actor method call args num wrong",
+			zap.String("typeName", reflect.TypeOf(ctx.Actor()).String()),
+			zap.String("methodName", m.name),
+			zap.Int("argNum", m.argNum),
+			zap.Int("inNum", len(args)))
 		return
 	}
-	args = append(args, valueOf(m.inTypes[2], msg))
-	m.fun.Call(args)
+	argValues := make([]reflect.Value, 2+m.argNum, 2+m.argNum)
+	argValues[0] = reflect.ValueOf(ctx.Actor())
+	argValues[1] = reflect.ValueOf(ctx)
+	for i, arg := range args {
+		argValues[i+2] = valueOf(m.argTypes[i], arg)
+	}
+	m.fun.Call(argValues)
 }
 
 func newHandlers(actor IActor) *handlers {
-	h := &handlers{
-		dict: make(map[string]*method),
-	}
-	h.init(actor)
+	h := new(handlers)
+	h.register(actor)
 	return h
 }
 
@@ -48,61 +60,21 @@ type handlers struct {
 	actor reflect.Value
 }
 
-func (h *handlers) init(actor IActor) {
-	typ := reflect.TypeOf(actor)
-	for i := 0; i < typ.NumMethod(); i++ {
-		m := typ.Method(i)
-		mt := m.Type
-
-		if !h.isHandlerMethod(m) {
-			continue
-		}
-		_m := &method{
-			fun:   m.Func,
-			typ:   mt,
-			inNum: m.Type.NumIn(),
-		}
-		for j := 0; j < m.Type.NumIn(); j++ {
-			t := m.Type.In(j)
-			_m.inTypes = append(_m.inTypes, t)
-		}
-		h.set(m.Name, _m)
-	}
+func (h *handlers) register(actor IActor) {
+	h.dict = suitableMethods(reflect.TypeOf(actor))
 }
 func (h *handlers) call(ctx IContext, env IEnvelopeMessage) {
-	funcName, _, msg := UnwrapEnvMessage(env)
+	funcName, _, args := UnwrapEnvMessage(env)
 	m, ok := h.dict[funcName]
 	if !ok {
 		return
 	}
-	m.call(ctx, msg)
-}
-func (h *handlers) set(methodName string, m *method) {
-	h.dict[methodName] = m
-}
-
-func (h *handlers) isHandlerMethod(method reflect.Method) bool {
-	if !method.IsExported() {
-		return false
-	}
-	mt := method.Type
-	if mt.NumIn() != 3 {
-		return false
-	}
-
-	v := reflect.TypeOf(defaultHandlerFunc)
-	for i := 0; i < v.NumMethod(); i++ {
-		if mt.In(1).Name() != v.In(1).Name() {
-			return false
-		}
-	}
-	return true
+	m.call(ctx, args)
 }
 
 func newType(t reflect.Type) interface{} {
 	var argv reflect.Value
-
-	if t.Kind() == reflect.Ptr { // reply must be ptr
+	if t.Kind() == reflect.Ptr {
 		argv = reflect.New(t.Elem())
 	} else {
 		argv = reflect.New(t)
@@ -120,4 +92,66 @@ func valueOf(t reflect.Type, msg interface{}) reflect.Value {
 	} else {
 		return reflect.ValueOf(v)
 	}
+}
+
+func suitableMethods(typ reflect.Type) map[string]*method {
+	var defaultParamType []reflect.Type
+	dt := reflect.TypeOf(DefaultMethod)
+	for i := 0; i < dt.NumIn(); i++ {
+		defaultParamType = append(defaultParamType, dt.In(i))
+	}
+
+	methods := make(map[string]*method)
+	for index := 0; index < typ.NumMethod(); index++ {
+		fun := typ.Method(index)
+		funType := fun.Type
+		funName := fun.Name
+		if fun.PkgPath != "" {
+			continue
+		}
+
+		//name1 := funType.In(0).Name()
+		//name2 := defaultParamType[0].Name()
+		//_, _ = name1, name2
+		// IActor,IContext,....
+		if !funType.In(0).Implements(defaultParamType[0]) {
+			continue
+		}
+
+		if funType.In(1) != defaultParamType[1] {
+			continue
+		}
+		argNum := funType.NumIn() - 2
+		// 检测是否所有参数都是导出类型
+		isExported := true
+		argTypes := make([]reflect.Type, argNum, argNum)
+		for i := 2; i < funType.NumIn(); i++ {
+			argType := funType.In(i)
+			if !isExportedType(argType) {
+				isExported = false
+				break
+			}
+			argTypes[i-2] = argType
+		}
+		if !isExported {
+			continue
+		}
+		methods[funName] = &method{
+			fun:      fun.Func,
+			typ:      funType,
+			name:     funName,
+			argNum:   argNum,
+			argTypes: argTypes,
+		}
+	}
+	return methods
+}
+
+func isExportedType(t reflect.Type) bool {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	name := t.Name()
+	rune, _ := utf8.DecodeRuneInString(name)
+	return unicode.IsUpper(rune) || t.PkgPath() == ""
 }

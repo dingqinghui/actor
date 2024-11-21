@@ -32,14 +32,14 @@ func (s *System) Named(name string, p IProcess) error {
 }
 
 func (s *System) GetProcessByName(name string) (IProcess, error) {
-	res, _, err := s.nameHub.Call("Get", name, time.Second*3)
+	res, err := s.nameHub.Call("Get", time.Second*3, name)
 	if err != nil {
 		return nil, err
 	}
 	if res == nil {
 		return nil, nil
 	}
-	return res.(IProcess), nil
+	return res[0].(IProcess), nil
 
 }
 

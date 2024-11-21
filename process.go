@@ -29,31 +29,34 @@ type ProcessActor struct {
 	mailBox IMailbox
 }
 
-func (p *ProcessActor) Send(funcName string, msg interface{}) error {
+func (p *ProcessActor) Send(funcName string, args ...interface{}) error {
 	if p.mailBox == nil {
 		return ErrMailBoxNil
 	}
 	if p.isStop.CompareAndSwap(true, true) {
 		return ErrActorStopped
 	}
-	env := WrapEnvMessage(funcName, nil, msg)
+	env := WrapEnvMessage(funcName, nil, args...)
 	return p.mailBox.PostMessage(env)
 }
 
-func (p *ProcessActor) Call(funcName string, message interface{}, timeout time.Duration) (interface{}, bool, error) {
+func (p *ProcessActor) Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error) {
 	if p.mailBox == nil {
-		return nil, false, ErrMailBoxNil
+		return nil, ErrMailBoxNil
 	}
 	if p.isStop.CompareAndSwap(true, true) {
-		return nil, false, ErrActorStopped
+		return nil, ErrActorStopped
 	}
 	fut := newFuture(timeout)
-	env := WrapEnvMessage(funcName, fut.Process(), message)
+	env := WrapEnvMessage(funcName, fut.Process(), args...)
 	if err := p.mailBox.PostMessage(env); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	res, isTimeout := fut.Wait()
-	return res, isTimeout, nil
+	if isTimeout {
+		return nil, errors.New("time out")
+	}
+	return res, nil
 }
 
 func (p *ProcessActor) Stop() error {
@@ -61,7 +64,7 @@ func (p *ProcessActor) Stop() error {
 		return errors.New("actor stopped")
 	}
 	fut := newFuture(time.Millisecond * 10)
-	env := WrapEnvMessage(StopFuncName, fut.Process(), nil)
+	env := WrapEnvMessage(StopFuncName, fut.Process())
 	if err := p.mailBox.PostMessage(env); err != nil {
 		return err
 	}

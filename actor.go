@@ -13,12 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-type IActor interface {
-	Init(ctx IContext, msg interface{})
-	Stop(ctx IContext)
-	Panic(ctx IContext, msg interface{})
-}
-
 type BuiltinActor struct {
 }
 

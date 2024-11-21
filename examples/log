@@ -1,0 +1,4 @@
+{"L":"error","T":"2024/11/20 19:04:21.047538+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args num wrong","typeName":"*examples.testActor","methodName":"Init","argNum":3,"inNum":1}
+{"L":"error","T":"2024/11/20 19:04:21.047538+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args num wrong","typeName":"*actor.NameHub","methodName":"Init","argNum":3,"inNum":1}
+{"L":"error","T":"2024/11/20 19:04:21.061262+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args num wrong","typeName":"*examples.testActor","methodName":"TestHandler","argNum":3,"inNum":1}
+{"L":"error","T":"2024/11/20 19:04:23.061365+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args num wrong","typeName":"*examples.testActor","methodName":"Stop","argNum":2,"inNum":1}

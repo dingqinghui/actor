@@ -19,7 +19,7 @@ var (
 )
 
 type EnvelopeMessage struct {
-	msg      interface{}
+	args     []interface{}
 	funcName string
 	sender   IProcess
 }
@@ -28,24 +28,24 @@ func (e *EnvelopeMessage) FuncName() string {
 	return e.funcName
 }
 
-func (e *EnvelopeMessage) Msg() interface{} {
-	return e.msg
+func (e *EnvelopeMessage) Args() []interface{} {
+	return e.args
 }
 func (e *EnvelopeMessage) Sender() IProcess {
 	return e.sender
 }
 
-func WrapEnvMessage(funcName string, sender IProcess, msg interface{}) *EnvelopeMessage {
+func WrapEnvMessage(funcName string, sender IProcess, args ...interface{}) *EnvelopeMessage {
 	return &EnvelopeMessage{
-		msg:      msg,
+		args:     args,
 		sender:   sender,
 		funcName: funcName,
 	}
 }
 
-func UnwrapEnvMessage(env IEnvelopeMessage) (funcName string, sender IProcess, msg interface{}) {
+func UnwrapEnvMessage(env IEnvelopeMessage) (funcName string, sender IProcess, args []interface{}) {
 	if env == nil {
 		return
 	}
-	return env.FuncName(), env.Sender(), env.Msg()
+	return env.FuncName(), env.Sender(), env.Args()
 }

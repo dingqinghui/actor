@@ -65,16 +65,17 @@ type IProcess interface {
 	// @param message
 	// @return error
 	//
-	Send(funcName string, message interface{}) error
+	Send(funcName string, args ...interface{}) error
 	//
 	// Call
-	// @Description:发送同步消息
-	// @param message
+	// @Description: 发送同步消息
+	// @param funcName
 	// @param timeout
-	// @return IFuture
+	// @param args
+	// @return []interface{}
 	// @return error
 	//
-	Call(funcName string, message interface{}, timeout time.Duration) (interface{}, bool, error)
+	Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error)
 	//
 	// Stop
 	// @Description: 停止Actor
@@ -104,6 +105,12 @@ type IFuture interface {
 
 type IEnvelopeMessage interface {
 	FuncName() string
-	Msg() interface{}
+	Args() []interface{}
 	Sender() IProcess
+}
+
+type IActor interface {
+	Init(ctx IContext, msg interface{})
+	Stop(ctx IContext)
+	Panic(ctx IContext, msg interface{})
 }
