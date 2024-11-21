@@ -40,23 +40,26 @@ func (p *ProcessActor) Send(funcName string, args ...interface{}) error {
 	return p.mailBox.PostMessage(env)
 }
 
-func (p *ProcessActor) Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error) {
+func (p *ProcessActor) Call(funcName string, timeout time.Duration, reply, request interface{}) error {
 	if p.mailBox == nil {
-		return nil, ErrMailBoxNil
+		return ErrMailBoxNil
 	}
 	if p.isStop.CompareAndSwap(true, true) {
-		return nil, ErrActorStopped
+		return ErrActorStopped
 	}
 	fut := newFuture(timeout)
-	env := WrapEnvMessage(funcName, fut.Process(), args...)
+	env := WrapEnvMessage(funcName, fut.Process(), reply, request)
 	if err := p.mailBox.PostMessage(env); err != nil {
-		return nil, err
+		return err
 	}
 	res, isTimeout := fut.Wait()
 	if isTimeout {
-		return nil, errors.New("time out")
+		return errors.New("time out")
 	}
-	return res, nil
+	if res[0] == nil {
+		return nil
+	}
+	return res[0].(error)
 }
 
 func (p *ProcessActor) Stop() error {

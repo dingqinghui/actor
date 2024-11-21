@@ -22,6 +22,7 @@ type EnvelopeMessage struct {
 	args     []interface{}
 	funcName string
 	sender   IProcess
+	reply    interface{}
 }
 
 func (e *EnvelopeMessage) FuncName() string {
@@ -48,4 +49,8 @@ func UnwrapEnvMessage(env IEnvelopeMessage) (funcName string, sender IProcess, a
 		return
 	}
 	return env.FuncName(), env.Sender(), env.Args()
+}
+
+func IsSyncMessage(env IEnvelopeMessage) bool {
+	return env.Sender() != nil
 }

@@ -55,7 +55,6 @@ type IContext interface {
 	System() ISystem
 	Actor() IActor
 	AddTimer(d time.Duration, funcName string)
-	Respond(msg interface{}) error
 }
 
 type IProcess interface {
@@ -75,7 +74,7 @@ type IProcess interface {
 	// @return []interface{}
 	// @return error
 	//
-	Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error)
+	Call(funcName string, timeout time.Duration, request, reply interface{}) error
 	//
 	// Stop
 	// @Description: 停止Actor
@@ -88,14 +87,14 @@ type IBlueprint interface {
 	Spawn(system ISystem, producer Producer, params interface{}) (IProcess, error)
 }
 
-type INamedHub interface {
-	Named(name string, p IProcess) error
-	GetProcessByName(name string) (IProcess, error)
-	DelName(name string) error
-}
+//type INamedHub interface {
+//	Named(name string, p IProcess) error
+//	GetProcessByName(name string) (IProcess, error)
+//	DelName(name string) error
+//}
 
 type ISystem interface {
-	INamedHub
+	//INamedHub
 	Spawn(b IBlueprint, producer Producer, params interface{}) (IProcess, error)
 }
 
@@ -110,7 +109,7 @@ type IEnvelopeMessage interface {
 }
 
 type IActor interface {
-	Init(ctx IContext, msg interface{})
-	Stop(ctx IContext)
-	Panic(ctx IContext, msg interface{})
+	Init(ctx IContext, msg interface{}) error
+	Stop() error
+	Panic(err string) error
 }

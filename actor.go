@@ -14,15 +14,19 @@ import (
 )
 
 type BuiltinActor struct {
+	Ctx IContext
 }
 
-func (r *BuiltinActor) Init(ctx IContext, msg interface{}) {
-
+func (r *BuiltinActor) Init(ctx IContext, msg interface{}) error {
+	r.Ctx = ctx
+	return nil
 }
 
-func (r *BuiltinActor) Stop(ctx IContext) {
+func (r *BuiltinActor) Stop() error {
+	return nil
 }
 
-func (r *BuiltinActor) Panic(ctx IContext, err interface{}) {
-	zlog.Panic("panic", zap.Error(err.(error)))
+func (r *BuiltinActor) Panic(errMsg string) error {
+	zlog.Panic("panic", zap.String("errMsg", errMsg))
+	return nil
 }

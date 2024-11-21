@@ -9,6 +9,7 @@
 package actor
 
 import (
+	"errors"
 	"github.com/dingqinghui/zlog"
 	"go.uber.org/zap"
 	"reflect"
@@ -16,12 +17,7 @@ import (
 	"unicode/utf8"
 )
 
-var (
-	typeOfContext = reflect.TypeOf((IContext)(nil))
-	typeOfActor   = reflect.TypeOf((IActor)(nil))
-)
-
-func DefaultMethod(actor IActor, ctx IContext) {}
+func DefaultMethod(actor IActor) error { return nil }
 
 type method struct {
 	name     string
@@ -31,22 +27,35 @@ type method struct {
 	argNum   int
 }
 
-func (m *method) call(ctx IContext, args []interface{}) {
+func (m *method) call(ctx IContext, args []interface{}) error {
 	if len(args) != m.argNum {
 		zlog.Error("actor method call args num wrong",
 			zap.String("typeName", reflect.TypeOf(ctx.Actor()).String()),
 			zap.String("methodName", m.name),
 			zap.Int("argNum", m.argNum),
 			zap.Int("inNum", len(args)))
-		return
+		return errors.New("args count err")
 	}
-	argValues := make([]reflect.Value, 2+m.argNum, 2+m.argNum)
+	argValues := make([]reflect.Value, 1+m.argNum, 1+m.argNum)
 	argValues[0] = reflect.ValueOf(ctx.Actor())
-	argValues[1] = reflect.ValueOf(ctx)
 	for i, arg := range args {
-		argValues[i+2] = valueOf(m.argTypes[i], arg)
+		if !checkArgsType(reflect.TypeOf(arg), m.argTypes[i]) {
+			zlog.Error("actor method call args type err",
+				zap.String("typeName", reflect.TypeOf(ctx.Actor()).String()),
+				zap.String("methodName", m.name),
+				zap.String("parameter", m.argTypes[i].String()),
+				zap.String("argument", reflect.TypeOf(arg).String()))
+			return errors.New("args type err")
+		}
+		argValues[i+1] = valueOf(m.argTypes[i], arg)
 	}
-	m.fun.Call(argValues)
+	returnValues := m.fun.Call(argValues)
+
+	errInter := returnValues[0].Interface()
+	if errInter != nil {
+		return errInter.(error)
+	}
+	return nil
 }
 
 func newHandlers(actor IActor) *handlers {
@@ -63,13 +72,13 @@ type handlers struct {
 func (h *handlers) register(actor IActor) {
 	h.dict = suitableMethods(reflect.TypeOf(actor))
 }
-func (h *handlers) call(ctx IContext, env IEnvelopeMessage) {
+func (h *handlers) call(ctx IContext, env IEnvelopeMessage) error {
 	funcName, _, args := UnwrapEnvMessage(env)
 	m, ok := h.dict[funcName]
 	if !ok {
-		return
+		return nil
 	}
-	m.call(ctx, args)
+	return m.call(ctx, args)
 }
 
 func newType(t reflect.Type) interface{} {
@@ -109,29 +118,31 @@ func suitableMethods(typ reflect.Type) map[string]*method {
 		if fun.PkgPath != "" {
 			continue
 		}
-
-		//name1 := funType.In(0).Name()
-		//name2 := defaultParamType[0].Name()
-		//_, _ = name1, name2
-		// IActor,IContext,....
+		if funType.NumIn() < 1 {
+			continue
+		}
+		if funType.NumOut() != 1 {
+			continue
+		}
+		if funType.Out(0) != dt.Out(0) {
+			continue
+		}
+		// IActor,request,reply....
 		if !funType.In(0).Implements(defaultParamType[0]) {
 			continue
 		}
 
-		if funType.In(1) != defaultParamType[1] {
-			continue
-		}
-		argNum := funType.NumIn() - 2
+		argNum := funType.NumIn() - 1
 		// 检测是否所有参数都是导出类型
 		isExported := true
 		argTypes := make([]reflect.Type, argNum, argNum)
-		for i := 2; i < funType.NumIn(); i++ {
+		for i := 1; i < funType.NumIn(); i++ {
 			argType := funType.In(i)
 			if !isExportedType(argType) {
 				isExported = false
 				break
 			}
-			argTypes[i-2] = argType
+			argTypes[i-1] = argType
 		}
 		if !isExported {
 			continue
@@ -154,4 +165,22 @@ func isExportedType(t reflect.Type) bool {
 	name := t.Name()
 	rune, _ := utf8.DecodeRuneInString(name)
 	return unicode.IsUpper(rune) || t.PkgPath() == ""
+}
+
+// checkArgsType
+// @Description:
+// @param argumentType 实参类型
+// @param parameterType 形参类型
+// @return bool
+func checkArgsType(argumentType, parameterType reflect.Type) bool {
+	if parameterType == argumentType {
+		return true
+	}
+	if parameterType.Kind() == reflect.Interface {
+		if argumentType.Implements(parameterType) {
+			return true
+		}
+	}
+
+	return false
 }

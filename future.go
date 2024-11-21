@@ -38,7 +38,7 @@ func (f *future) Process() IProcess {
 	return f
 }
 
-func (f *future) Call(funcName string, timeout time.Duration, args ...interface{}) ([]interface{}, error) {
+func (f *future) Call(funcName string, timeout time.Duration, reply, request interface{}) error {
 	panic("future call not imp")
 }
 

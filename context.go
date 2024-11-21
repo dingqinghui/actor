@@ -33,10 +33,9 @@ func NewBaseActorContext() *baseActorContext {
 func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) error {
 	// 执行消息回调
 	a.env = env
-	a.handlers.call(a, env)
-	// 同步stop
-	if env.FuncName() == StopFuncName {
-		return a.Respond(nil)
+	err := a.handlers.call(a, env)
+	if IsSyncMessage(env) {
+		return a.respond(err)
 	}
 	return nil
 }
@@ -63,7 +62,7 @@ func (a *baseActorContext) Actor() IActor {
 	return a.actor
 }
 
-func (a *baseActorContext) Respond(msg interface{}) error {
+func (a *baseActorContext) respond(err error) error {
 	if a.EnvMessage() == nil {
 		return ErrActorRespondEnvIsNil
 	}
@@ -71,5 +70,5 @@ func (a *baseActorContext) Respond(msg interface{}) error {
 	if sender == nil {
 		return ErrActorRespondSenderIsNil
 	}
-	return a.EnvMessage().Sender().Send("", msg)
+	return a.EnvMessage().Sender().Send("", err)
 }

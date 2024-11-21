@@ -9,6 +9,7 @@
 package examples
 
 import (
+	"errors"
 	"fmt"
 	"github.com/dingqinghui/actor"
 	"reflect"
@@ -24,8 +25,15 @@ type testActor struct {
 	actor.BuiltinActor
 }
 
-func (t *testActor) TestHandler(ctx actor.IContext, msg *Message, a int) {
-	fmt.Printf("==================TestHandler %v %v==================\n", msg, a)
+func (t *testActor) TestHandler(req *Message, reply *Message) error {
+	reply.A += req.A
+	fmt.Printf("==================TestHandler %v %v==================\n", req, reply)
+	return errors.New("test error")
+}
+
+func (t *testActor) TestHandler2(req *Message) error {
+	fmt.Printf("==================TestHandler2 %v ==================\n", req)
+	return errors.New("test error")
 }
 
 func TestActor(t *testing.T) {
@@ -34,13 +42,15 @@ func TestActor(t *testing.T) {
 	name := _t.Name()
 	_ = name
 	system := actor.NewSystem()
-
 	blueprint := actor.NewBlueprint()
 	pid, _ := system.Spawn(blueprint, func() actor.IActor { return &testActor{} }, "init params")
+	reply := &Message{A: 100}
+	err := pid.Call("TestHandler", time.Second*1, &Message{A: 2}, reply)
+	fmt.Printf("=======TestHandler respond:%v\n", err)
+	pid.Send("TestHandler2", &Message{A: 2})
 
+	fmt.Printf("========reply:%v========\n", reply)
 	pid.Send("TestHandler", &Message{A: 1}, 2)
 	time.Sleep(time.Second * 2)
 	pid.Stop()
-
-	fmt.Printf("================================================================\n")
 }

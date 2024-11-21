@@ -73,7 +73,7 @@ func (b *blueprint) Spawn(system ISystem, producer Producer, params interface{})
 	context.handlers = h
 	mb.RegisterHandlers(context, b.getDispatcher())
 	// notify actor start
-	if err := process.Send(InitFuncName, params); err != nil {
+	if err := process.Send(InitFuncName, context, params); err != nil {
 		return nil, err
 	}
 	return process, nil
