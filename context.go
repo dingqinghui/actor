@@ -43,7 +43,7 @@ func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) error {
 
 func (a *baseActorContext) AddTimer(d time.Duration, funcName string) {
 	tw.AfterFunc(d, func() {
-		_ = a.Process().Send(funcName, nil)
+		_ = a.Process().Send(funcName)
 	})
 }
 
