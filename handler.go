@@ -40,14 +40,6 @@ func (m *method) call(ctx IContext, args []interface{}) error {
 	argValues[0] = reflect.ValueOf(ctx.Actor())
 	argValues[1] = reflect.ValueOf(ctx)
 	for i, arg := range args {
-		if !checkArgsType(reflect.TypeOf(arg), m.argTypes[i]) {
-			zlog.Error("actor method call args type err",
-				zap.String("typeName", reflect.TypeOf(ctx.Actor()).String()),
-				zap.String("methodName", m.name),
-				zap.String("parameter", m.argTypes[i].String()),
-				zap.String("argument", reflect.TypeOf(arg).String()))
-			return errors.New("args type err")
-		}
 		argValues[i+2] = valueOf(m.argTypes[i], arg)
 	}
 	returnValues := m.fun.Call(argValues)
