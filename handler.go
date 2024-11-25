@@ -184,7 +184,7 @@ func checkArgsType(argumentType, parameterType reflect.Type) bool {
 		return true
 	}
 	if parameterType.Kind() == reflect.Interface {
-		if argumentType.Implements(parameterType) {
+		if argumentType != nil && argumentType.Implements(parameterType) {
 			return true
 		}
 	}
