@@ -17,7 +17,7 @@ import (
 	"unicode/utf8"
 )
 
-func DefaultMethod(actor IActor) error { return nil }
+func DefaultMethod(actor IActor, ctx IContext) error { return nil }
 
 type method struct {
 	name     string
@@ -36,8 +36,9 @@ func (m *method) call(ctx IContext, args []interface{}) error {
 			zap.Int("inNum", len(args)))
 		return errors.New("args count err")
 	}
-	argValues := make([]reflect.Value, 1+m.argNum, 1+m.argNum)
+	argValues := make([]reflect.Value, 2+m.argNum, 2+m.argNum)
 	argValues[0] = reflect.ValueOf(ctx.Actor())
+	argValues[1] = reflect.ValueOf(ctx)
 	for i, arg := range args {
 		if !checkArgsType(reflect.TypeOf(arg), m.argTypes[i]) {
 			zlog.Error("actor method call args type err",
@@ -47,7 +48,7 @@ func (m *method) call(ctx IContext, args []interface{}) error {
 				zap.String("argument", reflect.TypeOf(arg).String()))
 			return errors.New("args type err")
 		}
-		argValues[i+1] = valueOf(m.argTypes[i], arg)
+		argValues[i+2] = valueOf(m.argTypes[i], arg)
 	}
 	returnValues := m.fun.Call(argValues)
 
@@ -118,7 +119,7 @@ func suitableMethods(typ reflect.Type) map[string]*method {
 		if fun.PkgPath != "" {
 			continue
 		}
-		if funType.NumIn() < 1 {
+		if funType.NumIn() < 2 {
 			continue
 		}
 		if funType.NumOut() != 1 {
@@ -131,18 +132,24 @@ func suitableMethods(typ reflect.Type) map[string]*method {
 		if !funType.In(0).Implements(defaultParamType[0]) {
 			continue
 		}
+		n1 := funType.In(1).Name()
+		n2 := defaultParamType[1].Name()
+		_, _ = n1, n2
+		if funType.In(1) != defaultParamType[1] {
+			continue
+		}
 
-		argNum := funType.NumIn() - 1
+		argNum := funType.NumIn() - 2
 		// 检测是否所有参数都是导出类型
 		isExported := true
 		argTypes := make([]reflect.Type, argNum, argNum)
-		for i := 1; i < funType.NumIn(); i++ {
+		for i := 2; i < funType.NumIn(); i++ {
 			argType := funType.In(i)
 			if !isExportedType(argType) {
 				isExported = false
 				break
 			}
-			argTypes[i-1] = argType
+			argTypes[i-2] = argType
 		}
 		if !isExported {
 			continue

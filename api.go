@@ -9,6 +9,8 @@
 package actor
 
 import (
+	"github.com/dingqinghui/zlog"
+	"go.uber.org/zap"
 	"time"
 )
 
@@ -19,33 +21,12 @@ type IMessageInvoker interface {
 }
 
 type IMailbox interface {
-	//
-	// PostMessage
-	// @Description: 向邮箱投递消息(写入)
-	// @param msg
-	//
 	PostMessage(msg IEnvelopeMessage) error
-	//
-	// RegisterHandlers
-	// @Description: 注册消息处理函数(取出并处理)
-	// @param invoker
-	//
 	RegisterHandlers(invoker IMessageInvoker, dispatcher IDispatcher)
 }
 
 type IDispatcher interface {
-	//
-	// Schedule
-	// @Description: 调度
-	// @param f
-	// @param recoverFun
-	//
 	Schedule(f func(), recoverFun func(err interface{})) error
-	//
-	// Throughput
-	// @Description: 单次调度最大吞吐量
-	// @return int
-	//
 	Throughput() int
 }
 
@@ -58,28 +39,8 @@ type IContext interface {
 }
 
 type IProcess interface {
-	//
-	// Send
-	// @Description: 发送异步消息
-	// @param message
-	// @return error
-	//
 	Send(funcName string, args ...interface{}) error
-	//
-	// Call
-	// @Description: 发送同步消息
-	// @param funcName
-	// @param timeout
-	// @param args
-	// @return []interface{}
-	// @return error
-	//
 	Call(funcName string, timeout time.Duration, request, reply interface{}) error
-	//
-	// Stop
-	// @Description: 停止Actor
-	// @param isGrace 处理完接收到消息后关闭
-	//
 	Stop() error
 }
 
@@ -87,14 +48,7 @@ type IBlueprint interface {
 	Spawn(system ISystem, producer Producer, params interface{}) (IProcess, error)
 }
 
-//type INamedHub interface {
-//	Named(name string, p IProcess) error
-//	GetProcessByName(name string) (IProcess, error)
-//	DelName(name string) error
-//}
-
 type ISystem interface {
-	//INamedHub
 	Spawn(b IBlueprint, producer Producer, params interface{}) (IProcess, error)
 }
 
@@ -110,6 +64,22 @@ type IEnvelopeMessage interface {
 
 type IActor interface {
 	Init(ctx IContext, msg interface{}) error
-	Stop() error
-	Panic(err string) error
+	Stop(ctx IContext) error
+	Panic(ctx IContext, err interface{}) error
+}
+
+type BuiltinActor struct {
+}
+
+func (r *BuiltinActor) Init(ctx IContext, msg interface{}) error {
+	return nil
+}
+
+func (r *BuiltinActor) Stop(ctx IContext) error {
+	return nil
+}
+
+func (r *BuiltinActor) Panic(ctx IContext, err interface{}) error {
+	zlog.Panic("panic", zap.Error(err.(error)), zap.Stack("stack"))
+	return nil
 }

@@ -51,7 +51,7 @@ func (m *mailbox) schedule() error {
 		return nil
 	}
 	if err := m.dispatch.Schedule(m.process, func(err interface{}) {
-		_ = m.invoker.InvokerMessage(WrapEnvMessage(PanicFuncName, nil, err.(error).Error()))
+		_ = m.invoker.InvokerMessage(WrapEnvMessage(PanicFuncName, nil, err))
 	}); err != nil {
 		return err
 	}

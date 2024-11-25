@@ -9,7 +9,7 @@
 package actor
 
 import (
-	"errors"
+	"github.com/duke-git/lancet/v2/convertor"
 	"sync/atomic"
 	"time"
 )
@@ -36,35 +36,41 @@ func (p *ProcessActor) Send(funcName string, args ...interface{}) error {
 	if p.isStop.CompareAndSwap(true, true) {
 		return ErrActorStopped
 	}
-	env := WrapEnvMessage(funcName, nil, args...)
+	cloneArgs := make([]interface{}, len(args), len(args))
+	for i, arg := range args {
+		cloneArgs[i] = convertor.DeepClone(arg)
+	}
+	env := WrapEnvMessage(funcName, nil, cloneArgs...)
 	return p.mailBox.PostMessage(env)
 }
 
-func (p *ProcessActor) Call(funcName string, timeout time.Duration, reply, request interface{}) error {
+func (p *ProcessActor) Call(funcName string, timeout time.Duration, request, reply interface{}) error {
 	if p.mailBox == nil {
 		return ErrMailBoxNil
 	}
 	if p.isStop.CompareAndSwap(true, true) {
 		return ErrActorStopped
 	}
+	cloneRequest := convertor.DeepClone(request)
+	cloneReply := convertor.DeepClone(reply)
+
 	fut := newFuture(timeout)
-	env := WrapEnvMessage(funcName, fut.Process(), reply, request)
+	env := WrapEnvMessage(funcName, fut.Process(), cloneRequest, cloneReply)
 	if err := p.mailBox.PostMessage(env); err != nil {
 		return err
 	}
-	res, isTimeout := fut.Wait()
-	if isTimeout {
-		return errors.New("time out")
+	if err := fut.Wait(); err != nil {
+		return err
 	}
-	if res[0] == nil {
-		return nil
+	if err := convertor.CopyProperties(reply, cloneReply); err != nil {
+		return err
 	}
-	return res[0].(error)
+	return nil
 }
 
 func (p *ProcessActor) Stop() error {
 	if !p.isStop.CompareAndSwap(false, true) {
-		return errors.New("actor stopped")
+		return ErrActorStopped
 	}
 	fut := newFuture(time.Millisecond * 10)
 	env := WrapEnvMessage(StopFuncName, fut.Process())

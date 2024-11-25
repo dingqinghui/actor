@@ -30,14 +30,14 @@ func NewBaseActorContext() *baseActorContext {
 	return new(baseActorContext)
 }
 
-func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) error {
-	// 执行消息回调
+func (a *baseActorContext) InvokerMessage(env IEnvelopeMessage) (err error) {
 	a.env = env
-	err := a.handlers.call(a, env)
-	if IsSyncMessage(env) {
-		return a.respond(err)
+	err = a.handlers.call(a, env)
+	if env.Sender() == nil {
+		return
 	}
-	return nil
+	_ = env.Sender().Send("", err)
+	return
 }
 
 func (a *baseActorContext) AddTimer(d time.Duration, funcName string) {
@@ -60,15 +60,4 @@ func (a *baseActorContext) System() ISystem {
 
 func (a *baseActorContext) Actor() IActor {
 	return a.actor
-}
-
-func (a *baseActorContext) respond(err error) error {
-	if a.EnvMessage() == nil {
-		return ErrActorRespondEnvIsNil
-	}
-	sender := a.EnvMessage().Sender()
-	if sender == nil {
-		return ErrActorRespondSenderIsNil
-	}
-	return a.EnvMessage().Sender().Send("", err)
 }

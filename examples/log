@@ -1,3 +1,0 @@
-{"L":"error","T":"2024/11/21 17:30:39.404860+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args num wrong","typeName":"*examples.testActor","methodName":"TestHandler2","argNum":1,"inNum":2}
-{"L":"error","T":"2024/11/21 17:30:39.417824+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args type err","typeName":"*examples.testActor","methodName":"TestHandler","parameter":"*examples.Message","argument":"int"}
-{"L":"error","T":"2024/11/21 17:31:13.313109+0800","C":"zlog@v0.0.0-20241118080758-f3e552635795/api.go:54","M":"actor method call args type err","typeName":"*examples.testActor","methodName":"TestHandler","parameter":"*examples.Message","argument":"int"}

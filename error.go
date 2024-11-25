@@ -15,4 +15,5 @@ var (
 	ErrActorStopped            = errors.New("actor is stopped")
 	ErrActorRespondEnvIsNil    = errors.New("actor respond env is nil")
 	ErrActorRespondSenderIsNil = errors.New("actor respond sender is nil")
+	ErrActorCallTimeout        = errors.New("actor call timeout")
 )

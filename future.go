@@ -24,12 +24,14 @@ type future struct {
 	after   <-chan time.Time
 }
 
-func (f *future) Wait() (result []interface{}, isTimeout bool) {
+func (f *future) Wait() (err error) {
 	select {
 	case env := <-f.ch:
-		result = env.Args()
+		if len(env.Args()) > 0 && env.Args()[0] != nil {
+			err = env.Args()[0].(error)
+		}
 	case <-f.after:
-		isTimeout = true
+		err = ErrActorCallTimeout
 	}
 	return
 }
